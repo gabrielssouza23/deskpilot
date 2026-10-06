@@ -1,0 +1,42 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: deskpilot
+      POSTGRES_PASSWORD: deskpilot
+      POSTGRES_DB: deskpilot
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U deskpilot"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://deskpilot:deskpilot@db:5432/deskpilot
+      JWT_SECRET: ${JWT_SECRET:-local-docker-secret-change-me-in-production}
+      CORS_ORIGINS: http://localhost:3000
+      AI_PROVIDER: auto
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      SEED_DEMO_DATA: "true"
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        API_URL: http://api:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
