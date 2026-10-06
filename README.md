@@ -1,6 +1,6 @@
 # DeskPilot: an AI-assisted helpdesk
 
-[![CI](https://github.com/gabrielssouza23/claude-test/actions/workflows/ci.yml/badge.svg)](https://github.com/gabrielssouza23/claude-test/actions/workflows/ci.yml)
+[![CI](https://github.com/gabrielssouza23/deskpilot/actions/workflows/ci.yml/badge.svg)](https://github.com/gabrielssouza23/deskpilot/actions/workflows/ci.yml)
 
 DeskPilot is a full-stack support ticket system. Customers send a request through a public form. **Claude** reads each new ticket in the background and assigns a category, priority, sentiment and language. It also drafts a first reply in the customer's own language. Agents work from one dashboard, where they can search, filter, assign, reply and resolve tickets.
 
@@ -98,11 +98,21 @@ npm install
 npm run dev                   # http://localhost:3000, proxies /api to :8000
 ```
 
+### Option 3: deploy to Vercel
+
+`vercel.json` deploys both apps as one project with [Vercel Services](https://vercel.com/docs/services). Next.js serves the site, and `/api/*`, `/docs` and `/openapi.json` go to the FastAPI service on the same domain.
+
+1. Import the repository in Vercel and keep the **Services** preset.
+2. Add a Postgres database: **Storage → Neon** (free tier). It injects `DATABASE_URL`, and the API converts `postgres://` URLs to the psycopg driver.
+3. Set `JWT_SECRET`, `SEED_DEMO_DATA=true`, `COOKIE_SECURE=true` and, optionally, `ANTHROPIC_API_KEY`.
+
+Without a database the API falls back to SQLite in `/tmp`. That's enough for a quick look, but data resets whenever Vercel starts a new instance.
+
 ### Environment variables
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `DATABASE_URL` | `sqlite:///./deskpilot.db` | Any SQLAlchemy URL, e.g. `postgresql+psycopg://user:pass@host/db` |
+| `DATABASE_URL` | `sqlite:///./deskpilot.db` | Any SQLAlchemy URL. `postgres://` URLs from hosted providers work as-is. `POSTGRES_URL` is also read. |
 | `JWT_SECRET` | dev-only value | **Set this in production.** The API logs a warning when it's missing. |
 | `AI_PROVIDER` | `auto` | `auto` uses Claude when a key is present, `claude` requires it, `rules` never calls an LLM |
 | `ANTHROPIC_API_KEY` | (empty) | Enables Claude triage |
@@ -118,7 +128,7 @@ cd backend  && pytest && ruff check . && ruff format --check .
 cd frontend && npm test && npm run lint && npm run typecheck && npm run format:check
 ```
 
-- **Backend (39 tests):** auth flows (cookie and Bearer, wrong password, logout), ticket CRUD, filters, search, pagination, priority sorting, validation, background triage, fallback when the AI fails, and the Claude provider with a fake client (structured request, refusal, connection error).
+- **Backend (43 tests):** auth flows (cookie and Bearer, wrong password, logout), ticket CRUD, filters, search, pagination, priority sorting, validation, background triage, fallback when the AI fails, and the Claude provider with a fake client (structured request, refusal, connection error).
 - **Frontend (19 tests):** API error handling, URL filter parsing, date formatting, and the contact form (validation, a successful submission, a server error).
 - **CI:** GitHub Actions runs lint, format checks, type checking, tests and a production build for both apps on every push and pull request.
 
@@ -155,6 +165,7 @@ frontend/
     lib/              # typed API client, TanStack Query hooks, formatters
     proxy.ts          # optimistic auth redirect
 docker-compose.yml
+vercel.json           # one Vercel project: Next.js + FastAPI services
 .github/workflows/ci.yml
 ```
 

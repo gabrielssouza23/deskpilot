@@ -1,4 +1,5 @@
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -18,6 +19,8 @@ async def lifespan(_: FastAPI):
     settings = get_settings()
     if settings.jwt_secret == DEV_JWT_SECRET:
         logger.warning("JWT_SECRET is not set; using the insecure development default")
+    if os.getenv("VERCEL") and settings.database_url.startswith("sqlite"):
+        logger.warning("No DATABASE_URL on Vercel: using SQLite in /tmp, which resets often")
     # create_all is enough for a project this size; Alembic is on the roadmap.
     Base.metadata.create_all(engine)
     if settings.seed_demo_data:

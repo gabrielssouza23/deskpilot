@@ -8,6 +8,7 @@ import logging
 from datetime import timedelta
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 
 from app.database import Base, SessionLocal, engine
 from app.enums import TicketStatus
@@ -205,7 +206,13 @@ def seed_demo_data() -> bool:
                 )
             db.add(ticket)
 
-        db.commit()
+        try:
+            db.commit()
+        except IntegrityError:
+            # On serverless hosts two cold starts can race to seed the same
+            # database; the loser hits the unique email constraint. That's fine.
+            db.rollback()
+            return False
     logger.info("Seeded demo data. Log in with %s / %s", DEMO_EMAIL, DEMO_PASSWORD)
     return True
 
